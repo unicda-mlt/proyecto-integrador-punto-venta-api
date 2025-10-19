@@ -1,6 +1,7 @@
 using API;
 using Business;
 using Business.Authentication;
+using Business.Services;
 using Data;
 using Domain.Authentication;
 using Microsoft.Extensions.FileProviders;
@@ -26,6 +27,7 @@ if (storagePublicPath != null)
 // Add services to the container.
 builder.Services.AddDataServices(builder.Configuration);
 builder.Services.AddBusinessServices(builder.Configuration);
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 builder.Services.AddCors(options =>
 {
