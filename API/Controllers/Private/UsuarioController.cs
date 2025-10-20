@@ -14,10 +14,10 @@ namespace API.Private.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class UsuarioController(UsuarioRepository usuarioRepository, IUsuarioService usuarioService) : ControllerBase
+    public class UsuarioController(UsuarioRepository usuarioRepository) : ControllerBase
     {
         private readonly UsuarioRepository _usuarioRepository = usuarioRepository;
-        private readonly IUsuarioService _usuarioService = usuarioService;
+      
 
         [HttpPost("CreateOne")]
         [ProducesResponseType<UsuarioControllerCreateOneResponse>(StatusCodes.Status200OK)]
@@ -63,8 +63,7 @@ namespace API.Private.Controllers
         {
             try
             {
-                var resultado = await _usuarioService.ObtenerListaUsuariosAsync(page, pageSize);
-
+                var resultado = await _usuarioRepository.GetAll(page, pageSize);
                 return Ok(resultado);
             }
             catch (Exception ex)
@@ -84,23 +83,29 @@ namespace API.Private.Controllers
          )]
         public async Task<IActionResult> DesactivarUsuario(Guid id)
         {
-            var usuario = await _usuarioRepository.GetById(id);
-
-            if (usuario == null)
+            try
             {
-                return NotFound(new BadRequestResponse { BadMessage = "No se encontró un usuario con el ID proporcionado." });
-            }
+                var usuario = await _usuarioRepository.GetById(id);
+                if (usuario == null)
+                {
+                    return NotFound(new BadRequestResponse { BadMessage = "No se encontró un usuario con el ID proporcionado." });
+                }
 
-            if (usuario.Activo == false) 
+                if (usuario.Activo == false)
+                {
+                    return BadRequest(new BadRequestResponse { BadMessage = "El usuario ya se encuentra desactivado." });
+                }
+
+                usuario.Activo = false;
+
+                await _usuarioRepository.Edit(usuario);
+
+                return Ok();
+            }
+            catch (Exception ex)
             {
-                return BadRequest(new BadRequestResponse { BadMessage = "El usuario ya se encuentra desactivado." });
+                return StatusCode(500, new BadRequestResponse { BadMessage = $"Ocurrió un error interno: {ex.Message}" });
             }
-
-            usuario.Activo = false;
-
-            await _usuarioRepository.Edit(usuario);
-
-            return Ok();
         }
     }
 }

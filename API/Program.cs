@@ -27,7 +27,6 @@ if (storagePublicPath != null)
 // Add services to the container.
 builder.Services.AddDataServices(builder.Configuration);
 builder.Services.AddBusinessServices(builder.Configuration);
-builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 builder.Services.AddCors(options =>
 {
