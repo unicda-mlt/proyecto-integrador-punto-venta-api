@@ -1,9 +1,8 @@
 ﻿
 namespace Domain.API
 {
-    public class BaseObjectResponse<T>
+    public class BaseObjectResponse<T> : OkResponse
     {
-        public bool Ok { get; set; } = false;
         public T? Data { get; set; } = default;
     }
 }

@@ -32,25 +32,25 @@ namespace Data.Repositories.Interfaces
 
         Task<Entity?> GetById(IdType Id, string[] include);
 
-        Task<IGetAllReturn<Entity>> GetAll(int? page, byte? pageSize);
+        Task<IPaginationResponse<Entity>> GetAll(int? page, byte? pageSize);
 
-        Task<IGetAllReturn<Entity>> GetAll(string include, int? page, byte? pageSize);
+        Task<IPaginationResponse<Entity>> GetAll(string include, int? page, byte? pageSize);
 
-        Task<IGetAllReturn<Entity>> GetAll(string[] include, int? page, byte? pageSize);
+        Task<IPaginationResponse<Entity>> GetAll(string[] include, int? page, byte? pageSize);
 
-        Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter);
+        Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter);
 
-        Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string? include);
+        Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string? include);
 
-        Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, int? page, byte? pageSize);
+        Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, int? page, byte? pageSize);
 
-        Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string? include, int? page, byte? pageSize);
+        Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string? include, int? page, byte? pageSize);
 
-        Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[]? include, int? page, byte? pageSize);
+        Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[]? include, int? page, byte? pageSize);
 
-        Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[] include, Expression<Func<Entity, int>> orderBy);
+        Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[] include, Expression<Func<Entity, int>> orderBy);
 
-        Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[] include, Expression<Func<Entity, int>> orderBy, int? page, byte? pageSize);
+        Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[] include, Expression<Func<Entity, int>> orderBy, int? page, byte? pageSize);
 
     }
 }

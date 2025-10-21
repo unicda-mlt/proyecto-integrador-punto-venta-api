@@ -1,10 +1,8 @@
-﻿using Business.Services;
-using Business.Utils;
+﻿using Business.Utils;
 using Data.Repositories;
 using Domain.API;
-using Domain.API.Interfaces;
+using Domain.Authentication;
 using Domain.Controller.Private.Usuario;
-using Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -12,18 +10,15 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace API.Private.Controllers
 {
     [Authorize]
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
-    public class UsuarioController(UsuarioRepository usuarioRepository) : ControllerBase
+    public class UsuarioController(ICurrentUser _currentUser, UsuarioRepository _usuarioRepository) : ControllerBase
     {
-        private readonly UsuarioRepository _usuarioRepository = usuarioRepository;
-      
-
-        [HttpPost("CreateOne")]
+        [HttpPost]
         [ProducesResponseType<UsuarioControllerCreateOneResponse>(StatusCodes.Status200OK)]
         [SwaggerOperation(
-            Summary = "Crear una nueva categoría de evento",
-            Description = "Crea una nueva categoría de evento con el nombre proporcionado. Si ya existe una categoría con el mismo nombre, retorna el ID de la categoría existente."
+            Summary = "Crear un nuevo usuario",
+            Description = "Crea un nuevo usuario. Retorna error si ya existe un usuario con el mismo nombre y que no este eliminado."
         )]
         public async Task<IActionResult> CreateOne([FromBody] UsuarioControllerCreateOneDto data)
         {
@@ -53,18 +48,67 @@ namespace API.Private.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType<IGetAllReturn<Usuario>>(StatusCodes.Status200OK)]
+        [ProducesResponseType<BaseObjectResponse<UsuarioControllerGetByIdResponse>>(StatusCodes.Status200OK)]
+        [SwaggerOperation(
+              Summary = "Obtener un usuario por su ID.",
+              Description = "Devuelve un usuario que no este eliminado."
+          )]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var data = await _usuarioRepository.GetById(id);
+
+            if (data == null || data.Eliminado == true) {
+                return Ok(new BaseObjectResponse<object>
+                {
+                    Ok = true,
+                    Data = null
+                });
+            }
+
+            return Ok(new BaseObjectResponse<UsuarioControllerGetByIdResponse>
+            {
+                Ok = true,
+                Data = new UsuarioControllerGetByIdResponse
+                {
+                    Id = data.Id,
+                    Nombre = data.Nombre,
+                    UsuarioNombre = data.UsuarioNombre,
+                    Activo = data.Activo,
+                    CreadoEn = data.CreadoEn,
+                    ActualizadoEn = data.ActualizadoEn,
+                }
+            });
+        }
+
+        [HttpGet]
+        [ProducesResponseType<PaginationResponse<UsuarioControllerGetListResponse>>(StatusCodes.Status200OK)]
         [ProducesResponseType<BadRequestResponse>(StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(
               Summary = "Obtener lista de usuarios",
               Description = "Devuelve una lista de todos los usuarios."
           )]
-        public async Task<IActionResult> ObtenerListaUsuarios([FromQuery] int? page, [FromQuery] byte? pageSize)
+        public async Task<IActionResult> GetList([FromQuery] UsuarioControllerGetListDto param)
         {
             try
             {
-                var resultado = await _usuarioRepository.GetAll(page, pageSize);
-                return Ok(resultado);
+                var pagination = await _usuarioRepository.GetAll(
+                    filter: (x => !x.Eliminado
+                        && (param.UsuarioNombre == null || x.UsuarioNombre.StartsWith(param.UsuarioNombre))
+                        && (param.Activo == null || x.Activo == param.Activo)
+                    ),
+                    selector: (x => new UsuarioControllerGetListResponse
+                    {
+                        Id = x.Id,
+                        Nombre = x.Nombre,
+                        UsuarioNombre = x.UsuarioNombre,
+                        Activo = x.Activo,
+                    }),
+                    orderBy: x => x.CreadoEn,
+                    pageArg: param.Page,
+                    pageSizeArg: param.PageSize
+                );
+
+                return Ok(pagination);
             }
             catch (Exception ex)
             {
@@ -72,8 +116,7 @@ namespace API.Private.Controllers
             }
         }
 
-
-        [HttpPost("desactivar/{id:guid}")]
+        [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType<BadRequestResponse>(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<BadRequestResponse>(StatusCodes.Status404NotFound)]
@@ -81,26 +124,22 @@ namespace API.Private.Controllers
              Summary = "Desactiva un usuario por ID",
              Description = "Busca un usuario por su ID y establece su campo 'Activo' a 'false'."
          )]
-        public async Task<IActionResult> DesactivarUsuario(Guid id)
+        public async Task<IActionResult> DeactiveById(Guid id)
         {
             try
             {
-                var usuario = await _usuarioRepository.GetById(id);
-                if (usuario == null)
+                var dbUser = await _usuarioRepository.GetById(id);
+
+                if (dbUser == null || dbUser.Activo == false || dbUser.Eliminado == true || dbUser.Id.Equals(_currentUser.UsuarioId))
                 {
-                    return NotFound(new BadRequestResponse { BadMessage = "No se encontró un usuario con el ID proporcionado." });
+                    return Ok(new OkResponse());
                 }
 
-                if (usuario.Activo == false)
-                {
-                    return BadRequest(new BadRequestResponse { BadMessage = "El usuario ya se encuentra desactivado." });
-                }
+                dbUser.Activo = false;
 
-                usuario.Activo = false;
+                await _usuarioRepository.Edit(dbUser);
 
-                await _usuarioRepository.Edit(usuario);
-
-                return Ok();
+                return Ok(new OkResponse());
             }
             catch (Exception ex)
             {

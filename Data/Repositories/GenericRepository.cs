@@ -132,7 +132,7 @@ namespace Data.Repositories
             return await query.Where(x => x.Id!.Equals(Id)).FirstOrDefaultAsync();
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(int? pageArg, byte? pageSizeArg)
+        public async Task<IPaginationResponse<Entity>> GetAll(int? pageArg, byte? pageSizeArg)
         {
             int page = pageArg ?? 1;
             byte pageSize = pageSizeArg ?? 10;
@@ -142,7 +142,7 @@ namespace Data.Repositories
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -159,7 +159,7 @@ namespace Data.Repositories
                 .OrderBy(x => x.Id)
                 .ToListAsync();
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
@@ -173,7 +173,7 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(string include, int? pageArg, byte? pageSizeArg)
+        public async Task<IPaginationResponse<Entity>> GetAll(string include, int? pageArg, byte? pageSizeArg)
         {
             int page = pageArg ?? 1;
             byte pageSize = pageSizeArg ?? 10;
@@ -183,7 +183,7 @@ namespace Data.Repositories
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -201,7 +201,7 @@ namespace Data.Repositories
                 .ToListAsync();
 
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
@@ -215,7 +215,7 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(string[] include, int? pageArg, byte? pageSizeArg)
+        public async Task<IPaginationResponse<Entity>> GetAll(string[] include, int? pageArg, byte? pageSizeArg)
         {
             int page = pageArg ?? 1;
             byte pageSize = pageSizeArg ?? 10;
@@ -225,7 +225,7 @@ namespace Data.Repositories
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -249,7 +249,7 @@ namespace Data.Repositories
                 .ToListAsync();
 
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
@@ -263,14 +263,14 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter)
+        public async Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter)
         {
             int count = await _set.Where(filter).CountAsync();
 
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -284,7 +284,7 @@ namespace Data.Repositories
                 .ToListAsync();
 
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
@@ -298,14 +298,14 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string? include)
+        public async Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string? include)
         {
             int count = await _set.Where(filter).CountAsync();
 
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -331,7 +331,7 @@ namespace Data.Repositories
                 .ToListAsync();
             }
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
@@ -345,7 +345,7 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, int? pageArg, byte? pageSizeArg)
+        public async Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, int? pageArg, byte? pageSizeArg)
         {
             int page = pageArg ?? 1;
             byte pageSize = pageSizeArg ?? 10;
@@ -355,7 +355,7 @@ namespace Data.Repositories
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -373,7 +373,7 @@ namespace Data.Repositories
                 .ToListAsync();
 
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
@@ -387,7 +387,49 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string? include, int? pageArg, byte? pageSizeArg)
+        public async Task<IPaginationResponse<TResult>> GetAll<TResult, TOrder>(Expression<Func<Entity, bool>> filter, Func<Entity, TResult> selector, Expression<Func<Entity, TOrder>> orderBy, int? pageArg, byte? pageSizeArg)
+        {
+            int page = pageArg ?? 1;
+            byte pageSize = pageSizeArg ?? 10;
+
+            int count = await _set.Where(filter).CountAsync();
+
+            if (count == 0)
+            {
+
+                return new PaginationResponse<TResult>()
+                {
+                    Pagination = new Pagination(),
+                    Data = []
+                };
+
+            }
+
+            int pages = (int)Math.Ceiling(count / (double)pageSize);
+
+            var data = _set
+                .Where(filter)
+                .OrderBy(orderBy)
+                .Select(selector)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new PaginationResponse<TResult>()
+            {
+                Pagination = new Pagination()
+                {
+                    Pages = pages,
+                    Records = count,
+                    CurrentPage = page,
+                    PrevPage = page > 1 ? page - 1 : 0,
+                    NextPage = page < pages ? page + 1 : 0
+                },
+                Data = data
+            };
+        }
+
+        public async Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string? include, int? pageArg, byte? pageSizeArg)
         {
             int page = pageArg ?? 1;
             byte pageSize = pageSizeArg ?? 10;
@@ -397,7 +439,7 @@ namespace Data.Repositories
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -430,7 +472,7 @@ namespace Data.Repositories
             }
 
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
@@ -444,7 +486,7 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[]? include, int? pageArg, byte? pageSizeArg)
+        public async Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[]? include, int? pageArg, byte? pageSizeArg)
         {
             int page = pageArg ?? 1;
             byte pageSize = pageSizeArg ?? 10;
@@ -454,7 +496,7 @@ namespace Data.Repositories
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -494,7 +536,7 @@ namespace Data.Repositories
             }
 
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
@@ -508,14 +550,14 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[] include, Expression<Func<Entity, int>> orderBy)
+        public async Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[] include, Expression<Func<Entity, int>> orderBy)
         {
             int count = await _set.Where(filter).CountAsync();
 
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -549,7 +591,7 @@ namespace Data.Repositories
             }
 
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
@@ -563,7 +605,7 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IGetAllReturn<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[] include, Expression<Func<Entity, int>> orderBy, int? pageArg, byte? pageSizeArg)
+        public async Task<IPaginationResponse<Entity>> GetAll(Expression<Func<Entity, bool>> filter, string[] include, Expression<Func<Entity, int>> orderBy, int? pageArg, byte? pageSizeArg)
         {
             int page = pageArg ?? 1;
             byte pageSize = pageSizeArg ?? 10;
@@ -573,7 +615,7 @@ namespace Data.Repositories
             if (count == 0)
             {
 
-                return new GetAllReturn<Entity>()
+                return new PaginationResponse<Entity>()
                 {
                     Pagination = new Pagination(),
                     Data = []
@@ -613,7 +655,7 @@ namespace Data.Repositories
             }
 
 
-            return new GetAllReturn<Entity>()
+            return new PaginationResponse<Entity>()
             {
                 Pagination = new Pagination()
                 {
