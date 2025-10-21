@@ -82,6 +82,9 @@ namespace Business
             services.AddScoped<INVENTARIOLibroService>();
             services.AddScoped<INVENTARIOEditorialService>();
 
+            services.AddHttpContextAccessor();
+            services.AddScoped<ICurrentUser, CurrentUser>();
+
             return services;
         }
     }
