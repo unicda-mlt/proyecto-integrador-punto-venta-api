@@ -7,6 +7,9 @@ namespace Data
     {
         public DbSet<Rol> Roles { get; set; }
         public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<CajaEstadoModel> CajaEstados { get; set; }
+        public DbSet<Caja> Cajas { get; set; }
+        public DbSet<CajaVitacora> CajaVitacoras { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -62,6 +65,71 @@ namespace Data
                     Activo = true,
                     Eliminado = false
                 });
+            });
+
+            modelBuilder.Entity<CajaEstadoModel>(entity =>
+            {
+                entity.ToTable("caja_estados");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id);
+                entity.Property(x => x.Nombre).IsRequired().HasMaxLength(50);
+                entity.Property(x => x.CreadoEn).IsRequired().HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.HasData(new CajaEstadoModel
+                {
+                    Id = 1,
+                    Nombre = "CERRADO"
+                });
+
+                entity.HasData(new CajaEstadoModel
+                {
+                    Id = 2,
+                    Nombre = "ABIERTO"
+                });
+            });
+
+            modelBuilder.Entity<Caja>(entity =>
+            {
+                entity.ToTable("cajas");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id);
+                entity.Property(x => x.EstadoId).IsRequired();
+                entity.Property(x => x.Codigo).IsRequired().HasMaxLength(30);
+                entity.Property(x => x.Nombre).IsRequired().HasMaxLength(50);
+                entity.Property(x => x.CreadoEn).IsRequired().HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.HasOne(x => x.CajaEstado)
+                      .WithMany(x => x.Cajas)
+                      .HasForeignKey(x => x.EstadoId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .HasConstraintName("caja_fk_estado_id");
+
+                entity.HasIndex(x => x.Codigo)
+                    .IsUnique()
+                    .HasDatabaseName("caja_udx_codigo");
+            });
+
+            modelBuilder.Entity<CajaVitacora>(entity =>
+            {
+                entity.ToTable("caja_vitacora");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id);
+                entity.Property(x => x.UsuarioId).IsRequired();
+                entity.Property(x => x.CajaId).IsRequired();
+                entity.Property(x => x.FechaApertura).IsRequired();
+                entity.Property(x => x.CreadoEn).IsRequired().HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.HasOne(x => x.Caja)
+                      .WithMany(x => x.CajaVitacoras)
+                      .HasForeignKey(x => x.CajaId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .HasConstraintName("caja_vitacora_fk_caja_id");
+
+                entity.HasOne(x => x.Usuario)
+                    .WithMany(x => x.CajaVitacoras)
+                    .HasForeignKey(v => v.UsuarioId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("caja_vitacora_fk_usuario_id");
             });
         }
     }
