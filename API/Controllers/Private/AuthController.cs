@@ -53,7 +53,13 @@ namespace API.Private.Controllers
                 return Unauthorized();
             }
 
-            return Ok(data);
+            return Ok(new GetUserInfoResponse
+            {
+                Id = data.Id,
+                UsuarioNombre = data.UsuarioNombre,
+                Nombre = data.Nombre,
+                Rol = data.Rol
+            });
         }
     }
 }

@@ -11,7 +11,7 @@ namespace API.Private.Controllers
     [Authorize]
     [Route("api/[controller]/[action]")] 
     [ApiController]
-    public class CajaController(CajaRepository _cajaRepository) : ControllerBase
+    public class CajaController(CajaRepository _cajaRepository, UsuarioRepository _usuarioRepository) : ControllerBase
     {
         [HttpPost]
         [ProducesResponseType<CajaControllerCreateOneResponse>(StatusCodes.Status200OK)]
@@ -183,6 +183,47 @@ namespace API.Private.Controllers
             dbCaja.Activo = false;
 
             await _cajaRepository.Edit(dbCaja);
+
+            return Ok(new OkResponse());
+        }
+
+        [HttpPost]
+        [ProducesResponseType<OkResponse>(StatusCodes.Status200OK)]
+        [SwaggerOperation(
+             Summary = "Abrir/Aperturar una caja por ID",
+             Description = "Apertura una caja para poder realizar facturaciones."
+         )]
+        public async Task<IActionResult> Open(Guid id, [FromBody] CajaControllerOpenDto data)
+        {
+            var dbCaja = await _cajaRepository.GetById(id);
+
+            if (dbCaja == null || dbCaja.Activo == false || dbCaja.Eliminado == true)
+            {
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "La caja no se ha encontrado o se encuentra inactiva."
+                });
+            }
+
+            if (dbCaja.EstadoId == CajaEstado.Abierto.GetValue())
+            {
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "La caja se encuentra abierta."
+                });
+            }
+
+            var dbUser = await _usuarioRepository.GetById(data.UsuarioId);
+
+            if (dbUser == null || dbUser.Activo == false || dbUser.Eliminado == true)
+            {
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "El usuario no se ha encontrado o se encuentra inactivo."
+                });
+            }
+
+            await _cajaRepository.Open(dbUser.Id, dbCaja.Id);
 
             return Ok(new OkResponse());
         }

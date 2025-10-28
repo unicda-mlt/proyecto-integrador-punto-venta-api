@@ -9,8 +9,8 @@ namespace Data.Repositories
 {
     public class GenericRepository<IdType, Entity>(AppDbContext context) : IGenericRepository<IdType, Entity> where Entity : BaseEntity<IdType>
     {
-        private readonly AppDbContext _context = context;
-        private readonly DbSet<Entity> _set = context.Set<Entity>();
+        internal readonly AppDbContext _context = context;
+        internal readonly DbSet<Entity> _set = context.Set<Entity>();
 
         public async Task<Entity> Create(Entity entity)
         {
