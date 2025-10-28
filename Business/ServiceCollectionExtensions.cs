@@ -77,6 +77,7 @@ namespace Business
             services.AddScoped<AuthenticationService>();
             services.AddScoped<AuthService>();
             services.AddScoped<UsuarioRepository>();
+            services.AddScoped<CajaRepository>();
             services.AddScoped<INVENTARIOEventoService>();
             services.AddScoped<INVENTARIOCategoriaEventoService>();
             services.AddScoped<INVENTARIOLibroService>();

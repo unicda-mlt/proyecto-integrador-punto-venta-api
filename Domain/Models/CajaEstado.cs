@@ -8,9 +8,17 @@ namespace Domain.Models
         public ICollection<Caja> Cajas { get; set; } = [];
     }
 
-    public enum CajaEstado
+    public enum CajaEstado : short
     {
         Cerrado = 1,
         Abierto = 2
+    }
+
+    public static class CajaEstadoExtensions
+    {
+        public static short GetValue(this CajaEstado estado)
+        {
+            return (short)estado;
+        }
     }
 }

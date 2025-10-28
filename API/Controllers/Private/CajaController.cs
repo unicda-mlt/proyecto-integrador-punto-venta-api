@@ -1,19 +1,17 @@
 ﻿using Data.Repositories;
 using Domain.API;
-using Domain.Authentication; 
 using Domain.Controller.Private.Caja;
 using Domain.Models; 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using System;
 
 namespace API.Private.Controllers
 {
     [Authorize]
     [Route("api/[controller]/[action]")] 
     [ApiController]
-    public class CajaController(ICurrentUser _currentUser, CajaRepository _cajaRepository) : ControllerBase
+    public class CajaController(CajaRepository _cajaRepository) : ControllerBase
     {
         [HttpPost]
         [ProducesResponseType<CajaControllerCreateOneResponse>(StatusCodes.Status200OK)]
@@ -36,7 +34,7 @@ namespace API.Private.Controllers
 
             var newCaja = await _cajaRepository.Create(new()
             {
-                EstadoId = data.EstadoId,
+                EstadoId = CajaEstado.Cerrado.GetValue(),
                 Codigo = data.Codigo,
                 Nombre = data.Nombre,
                 Activo = data.Activo,
@@ -49,6 +47,83 @@ namespace API.Private.Controllers
             });
         }
 
+        [HttpPost]
+        [ProducesResponseType<OkResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType<BadRequestResponse>(StatusCodes.Status400BadRequest)]
+        [SwaggerOperation(
+            Summary = "Editar una caja",
+            Description = "Edita los datos de una caja. La caja no debe de estar eliminada para poder ser editada."
+        )]
+        public async Task<IActionResult> EditOne(Guid id, [FromBody] CajaControllerEditOneDto data)
+        {
+            var dbCaja = await _cajaRepository.GetOneByFilter(x => x.Id.Equals(id));
+
+            if (dbCaja == null || dbCaja.Eliminado == true)
+            {
+                return Ok(new OkResponse());
+            }
+            else if (dbCaja.EstadoId == CajaEstado.Abierto.GetValue())
+            {
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "La caja se encuentra abierta."
+                });
+            }
+
+                Caja? dbCajaConCodigo = data.Codigo == null ? null : await _cajaRepository.GetOneByFilter(x => x.Codigo.Equals(data.Codigo) && !x.Id.Equals(id));
+
+            if (dbCajaConCodigo != null)
+            {
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "Ya existe una caja con el código enviado."
+                });
+            }
+
+            dbCaja.Codigo = data.Codigo ?? dbCaja.Codigo;
+            dbCaja.Nombre = data.Nombre ?? dbCaja.Nombre;
+            dbCaja.Activo = data.Activo ?? dbCaja.Activo;
+
+            await _cajaRepository.Edit(dbCaja);
+
+            return Ok(new OkResponse());
+        }
+
+        [HttpGet]
+        [ProducesResponseType<BaseObjectResponse<CajaControllerGetByIdResponse>>(StatusCodes.Status200OK)]
+        [SwaggerOperation(
+              Summary = "Obtener una caja por su ID.",
+              Description = "Devuelve una caja que no este eliminado."
+          )]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var data = await _cajaRepository.GetById(id);
+
+            if (data == null || data.Eliminado == true)
+            {
+                return Ok(new BaseObjectResponse<object>
+                {
+                    Ok = true,
+                    Data = null
+                });
+            }
+
+            return Ok(new BaseObjectResponse<CajaControllerGetByIdResponse>
+            {
+                Ok = true,
+                Data = new CajaControllerGetByIdResponse
+                {
+                    Id = data.Id,
+                    EstadoId = data.EstadoId,
+                    Codigo = data.Codigo,
+                    Nombre = data.Nombre,
+                    Activo = data.Activo,
+                    CreadoEn = data.CreadoEn,
+                    ActualizadoEn = data.ActualizadoEn,
+                }
+            });
+        }
+
         [HttpGet]
         [ProducesResponseType<PaginationResponse<CajaControllerGetListResponse>>(StatusCodes.Status200OK)]
         [ProducesResponseType<BadRequestResponse>(StatusCodes.Status500InternalServerError)]
@@ -58,33 +133,28 @@ namespace API.Private.Controllers
           )]
         public async Task<IActionResult> GetList([FromQuery] CajaControllerGetListDto param)
         {
-            try
-            {
-                var pagination = await _cajaRepository.GetAll(
-                    filter: (x => !x.Eliminado
-                        && (param.Nombre == null || x.Nombre.Contains(param.Nombre))
-                        && (param.Codigo == null || x.Codigo.Contains(param.Codigo))
-                        && (param.Activo == null || x.Activo == param.Activo)
-                    ),
-                    selector: (x => new CajaControllerGetListResponse
-                    {
-                        Id = x.Id,
-                        Nombre = x.Nombre,
-                        Codigo = x.Codigo,
-                        EstadoId = x.EstadoId,
-                        Activo = x.Activo,
-                    }),
-                    orderBy: x => x.CreadoEn,
-                    pageArg: param.Page,
-                    pageSizeArg: param.PageSize
-                );
+            var pagination = await _cajaRepository.GetAll(
+                filter: (x => !x.Eliminado
+                    && (param.EstadoId == null || x.EstadoId.Equals(param.EstadoId))
+                    && (param.Codigo == null || x.Codigo.StartsWith(param.Codigo))
+                    && (param.Activo == null || x.Activo == param.Activo)
+                ),
+                ["CajaEstado"],
+                selector: (x => new CajaControllerGetListResponse
+                {
+                    Id = x.Id,
+                    EstadoId = x.EstadoId,
+                    Nombre = x.Nombre,
+                    Codigo = x.Codigo,
+                    Estado = x.CajaEstado.Nombre,
+                    Activo = x.Activo,
+                }),
+                orderBy: x => x.CreadoEn,
+                pageArg: param.Page,
+                pageSizeArg: param.PageSize
+            );
 
-                return Ok(pagination);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new BadRequestResponse { BadMessage = $"Ocurrió un error interno: {ex.Message}" });
-            }
+            return Ok(pagination);
         }
 
         [HttpPost]
@@ -95,27 +165,26 @@ namespace API.Private.Controllers
          )]
         public async Task<IActionResult> DeactiveById(Guid id)
         {
-            try
+            var dbCaja = await _cajaRepository.GetById(id);
+
+            if (dbCaja == null || dbCaja.Activo == false || dbCaja.Eliminado == true)
             {
-                var dbCaja = await _cajaRepository.GetById(id);
-
-                // Validamos que exista, que no esté eliminada y que esté activa
-                if (dbCaja == null || dbCaja.Activo == false || dbCaja.Eliminado == true)
-                {
-                    // No hacemos nada y devolvemos OK, igual que en UsuarioController
-                    return Ok(new OkResponse());
-                }
-
-                dbCaja.Activo = false;
-
-                await _cajaRepository.Edit(dbCaja);
-
                 return Ok(new OkResponse());
             }
-            catch (Exception ex)
+
+            if (dbCaja.EstadoId == CajaEstado.Abierto.GetValue())
             {
-                return StatusCode(500, new BadRequestResponse { BadMessage = $"Ocurrió un error interno: {ex.Message}" });
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "La caja se encuentra abierta."
+                });
             }
+
+            dbCaja.Activo = false;
+
+            await _cajaRepository.Edit(dbCaja);
+
+            return Ok(new OkResponse());
         }
     }
 }
