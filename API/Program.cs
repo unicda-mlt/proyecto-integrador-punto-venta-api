@@ -3,6 +3,7 @@ using Business;
 using Business.Authentication;
 using Business.Services;
 using Data;
+using Data.Repositories;
 using Domain.Authentication;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
@@ -27,6 +28,7 @@ if (storagePublicPath != null)
 // Add services to the container.
 builder.Services.AddDataServices(builder.Configuration);
 builder.Services.AddBusinessServices(builder.Configuration);
+builder.Services.AddScoped<CajaRepository>();
 
 builder.Services.AddCors(options =>
 {

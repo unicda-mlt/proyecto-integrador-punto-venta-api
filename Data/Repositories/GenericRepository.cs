@@ -9,8 +9,8 @@ namespace Data.Repositories
 {
     public class GenericRepository<IdType, Entity>(AppDbContext context) : IGenericRepository<IdType, Entity> where Entity : BaseEntity<IdType>
     {
-        private readonly AppDbContext _context = context;
-        private readonly DbSet<Entity> _set = context.Set<Entity>();
+        internal readonly AppDbContext _context = context;
+        internal readonly DbSet<Entity> _set = context.Set<Entity>();
 
         public async Task<Entity> Create(Entity entity)
         {
@@ -387,7 +387,12 @@ namespace Data.Repositories
             };
         }
 
-        public async Task<IPaginationResponse<TResult>> GetAll<TResult, TOrder>(Expression<Func<Entity, bool>> filter, Func<Entity, TResult> selector, Expression<Func<Entity, TOrder>> orderBy, int? pageArg, byte? pageSizeArg)
+        public async Task<IPaginationResponse<TResult>> GetAll<TResult, TOrder>(
+            Expression<Func<Entity, bool>> filter,
+            Func<Entity, TResult> selector,
+            Expression<Func<Entity, TOrder>> orderBy,
+            int? pageArg, byte? pageSizeArg
+        )
         {
             int page = pageArg ?? 1;
             byte pageSize = pageSizeArg ?? 10;
@@ -409,6 +414,60 @@ namespace Data.Repositories
 
             var data = _set
                 .Where(filter)
+                .OrderBy(orderBy)
+                .Select(selector)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new PaginationResponse<TResult>()
+            {
+                Pagination = new Pagination()
+                {
+                    Pages = pages,
+                    Records = count,
+                    CurrentPage = page,
+                    PrevPage = page > 1 ? page - 1 : 0,
+                    NextPage = page < pages ? page + 1 : 0
+                },
+                Data = data
+            };
+        }
+
+        public async Task<IPaginationResponse<TResult>> GetAll<TResult, TOrder>(
+            Expression<Func<Entity, bool>> filter,
+            string[] include,
+            Func<Entity, TResult> selector,
+            Expression<Func<Entity, TOrder>> orderBy,
+            int? pageArg, byte? pageSizeArg
+        )
+        {
+            int page = pageArg ?? 1;
+            byte pageSize = pageSizeArg ?? 10;
+
+            int count = await _set.Where(filter).CountAsync();
+
+            if (count == 0)
+            {
+
+                return new PaginationResponse<TResult>()
+                {
+                    Pagination = new Pagination(),
+                    Data = []
+                };
+
+            }
+
+            int pages = (int)Math.Ceiling(count / (double)pageSize);
+
+            var query = _set.Where(filter);
+
+            foreach (string item in include)
+            {
+                query = query.Include(item);
+            }
+
+            var data = query
                 .OrderBy(orderBy)
                 .Select(selector)
                 .Skip((page - 1) * pageSize)

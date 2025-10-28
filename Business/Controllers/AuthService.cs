@@ -49,6 +49,7 @@ namespace Business.Controllers
 
             return new()
             {
+                Id = usuario.Id,
                 Rol = new()
                 {
                     Id = usuario.Rol.Id,
