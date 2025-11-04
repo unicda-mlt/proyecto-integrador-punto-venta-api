@@ -13,82 +13,6 @@ namespace API.Private.Controllers
     [ApiController]
     public class CajaController(CajaRepository _cajaRepository, UsuarioRepository _usuarioRepository) : ControllerBase
     {
-        [HttpPost]
-        [ProducesResponseType<CajaControllerCreateOneResponse>(StatusCodes.Status200OK)]
-        [ProducesResponseType<BadRequestResponse>(StatusCodes.Status400BadRequest)]
-        [SwaggerOperation(
-            Summary = "Crear una nueva caja",
-            Description = "Crea una nueva caja. Retorna error si ya existe una caja con el mismo código y que no este eliminada."
-        )]
-        public async Task<IActionResult> CreateOne([FromBody] CajaControllerCreateOneDto data)
-        {
-            var dbCaja = await _cajaRepository.GetOneByFilter(x => x.Codigo.Equals(data.Codigo) && !x.Eliminado);
-
-            if (dbCaja != null)
-            {
-                return BadRequest(new BadRequestResponse
-                {
-                    BadMessage = "Ya existe una caja con el código enviado."
-                });
-            }
-
-            var newCaja = await _cajaRepository.Create(new()
-            {
-                EstadoId = CajaEstado.Cerrado.GetValue(),
-                Codigo = data.Codigo,
-                Nombre = data.Nombre,
-                Activo = data.Activo,
-                Eliminado = false
-            });
-
-            return Ok(new
-            {
-                newCaja.Id
-            });
-        }
-
-        [HttpPost]
-        [ProducesResponseType<OkResponse>(StatusCodes.Status200OK)]
-        [ProducesResponseType<BadRequestResponse>(StatusCodes.Status400BadRequest)]
-        [SwaggerOperation(
-            Summary = "Editar una caja",
-            Description = "Edita los datos de una caja. La caja no debe de estar eliminada para poder ser editada."
-        )]
-        public async Task<IActionResult> EditOne(Guid id, [FromBody] CajaControllerEditOneDto data)
-        {
-            var dbCaja = await _cajaRepository.GetOneByFilter(x => x.Id.Equals(id));
-
-            if (dbCaja == null || dbCaja.Eliminado == true)
-            {
-                return Ok(new OkResponse());
-            }
-            else if (dbCaja.EstadoId == CajaEstado.Abierto.GetValue())
-            {
-                return BadRequest(new BadRequestResponse
-                {
-                    BadMessage = "La caja se encuentra abierta."
-                });
-            }
-
-                Caja? dbCajaConCodigo = data.Codigo == null ? null : await _cajaRepository.GetOneByFilter(x => x.Codigo.Equals(data.Codigo) && !x.Id.Equals(id));
-
-            if (dbCajaConCodigo != null)
-            {
-                return BadRequest(new BadRequestResponse
-                {
-                    BadMessage = "Ya existe una caja con el código enviado."
-                });
-            }
-
-            dbCaja.Codigo = data.Codigo ?? dbCaja.Codigo;
-            dbCaja.Nombre = data.Nombre ?? dbCaja.Nombre;
-            dbCaja.Activo = data.Activo ?? dbCaja.Activo;
-
-            await _cajaRepository.Edit(dbCaja);
-
-            return Ok(new OkResponse());
-        }
-
         [HttpGet]
         [ProducesResponseType<BaseObjectResponse<CajaControllerGetByIdResponse>>(StatusCodes.Status200OK)]
         [SwaggerOperation(
@@ -155,6 +79,112 @@ namespace API.Private.Controllers
             );
 
             return Ok(pagination);
+        }
+
+        [HttpPost]
+        [ProducesResponseType<CajaControllerCreateOneResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType<BadRequestResponse>(StatusCodes.Status400BadRequest)]
+        [SwaggerOperation(
+            Summary = "Crear una nueva caja",
+            Description = "Crea una nueva caja. Retorna error si ya existe una caja con el mismo código y que no este eliminada."
+        )]
+        public async Task<IActionResult> CreateOne([FromBody] CajaControllerCreateOneDto data)
+        {
+            var dbCaja = await _cajaRepository.GetOneByFilter(x => x.Codigo.Equals(data.Codigo) && !x.Eliminado);
+
+            if (dbCaja != null)
+            {
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "Ya existe una caja con el código enviado."
+                });
+            }
+
+            var newCaja = await _cajaRepository.Create(new()
+            {
+                EstadoId = CajaEstado.Cerrado.GetValue(),
+                Codigo = data.Codigo,
+                Nombre = data.Nombre,
+                Activo = data.Activo,
+                Eliminado = false
+            });
+
+            return Ok(new
+            {
+                newCaja.Id
+            });
+        }
+
+        [HttpPost]
+        [ProducesResponseType<OkResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType<BadRequestResponse>(StatusCodes.Status400BadRequest)]
+        [SwaggerOperation(
+            Summary = "Editar una caja",
+            Description = "Edita los datos de una caja. La caja no debe de estar eliminada para poder ser editada."
+        )]
+        public async Task<IActionResult> EditOne(Guid id, [FromBody] CajaControllerEditOneDto data)
+        {
+            var dbCaja = await _cajaRepository.GetOneByFilter(x => x.Id.Equals(id));
+
+            if (dbCaja == null || dbCaja.Eliminado == true)
+            {
+                return Ok(new OkResponse());
+            }
+            else if (dbCaja.EstadoId == CajaEstado.Abierto.GetValue())
+            {
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "La caja se encuentra abierta."
+                });
+            }
+
+            Caja? dbCajaConCodigo = data.Codigo == null ? null : await _cajaRepository.GetOneByFilter(x => x.Codigo.Equals(data.Codigo) && !x.Id.Equals(id));
+
+            if (dbCajaConCodigo != null)
+            {
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "Ya existe una caja con el código enviado."
+                });
+            }
+
+            dbCaja.Codigo = data.Codigo ?? dbCaja.Codigo;
+            dbCaja.Nombre = data.Nombre ?? dbCaja.Nombre;
+            dbCaja.Activo = data.Activo ?? dbCaja.Activo;
+
+            await _cajaRepository.Edit(dbCaja);
+
+            return Ok(new OkResponse());
+        }
+
+        [HttpPost]
+        [ProducesResponseType<OkResponse>(StatusCodes.Status200OK)]
+        [SwaggerOperation(
+             Summary = "Eliminar una caja por ID",
+             Description = "Busca una caja por su ID y establece su campo 'Eliminado' a 'true'."
+         )]
+        public async Task<IActionResult> DeleteById(Guid id)
+        {
+            var dbCaja = await _cajaRepository.GetById(id);
+
+            if (dbCaja == null || dbCaja.Eliminado == true)
+            {
+                return Ok(new OkResponse());
+            }
+
+            if (dbCaja.EstadoId == CajaEstado.Abierto.GetValue())
+            {
+                return BadRequest(new BadRequestResponse
+                {
+                    BadMessage = "La caja se encuentra abierta."
+                });
+            }
+
+            dbCaja.Eliminado = true;
+
+            await _cajaRepository.Edit(dbCaja);
+
+            return Ok(new OkResponse());
         }
 
         [HttpPost]
