@@ -1,11 +1,14 @@
 # Start using docker
-start:
+up:
 	docker compose up -d
+
+db-sync:
+	dotnet ef database update --project Data --startup-project API
 
 # start Project API from Root
 run:
 	dotnet run --project API
 
 # Down the project
-clear:
-	docker compose down
+down:
+	docker compose down -v
