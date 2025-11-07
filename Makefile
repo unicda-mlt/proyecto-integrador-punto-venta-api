@@ -1,3 +1,12 @@
+# dotnet --info | grep "SDK"
+# restore and build (from root)
+# dotnet restore ./API/PuntoVenta_API.sln
+# dotnet build   ./API/PuntoVenta_API.sln
+# Next steps:
+# make up
+# make db-sync
+# make run
+
 # Start using docker
 up:
 	docker compose up -d
