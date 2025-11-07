@@ -6,7 +6,7 @@ services:
             ACCEPT_EULA: 'Y'
             MSSQL_SA_PASSWORD: '*RHPbbF@K1GN)Y#)3a+'
         ports:
-            - '11434:1433'
+            - '11433:1433'
         volumes:
             - mssqldata:/var/opt/mssql
 volumes:
