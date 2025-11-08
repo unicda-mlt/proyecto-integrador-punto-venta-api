@@ -21,3 +21,6 @@ run:
 # Down the project
 down:
 	docker compose down -v
+
+stop:
+	docker compose stop
